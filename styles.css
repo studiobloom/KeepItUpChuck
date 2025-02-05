@@ -1,0 +1,125 @@
+body {
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+    cursor: default;
+}
+
+#score {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    font-size: 24px;
+    font-family: Arial, sans-serif;
+}
+
+#balloon {
+    position: absolute;
+    font-size: 50px;
+    user-select: none;
+    transition: transform 0.1s;
+    transform: translate(-50%, -50%);
+    padding: 20px;
+    cursor: pointer;
+    z-index: 1000;
+    text-align: center;
+}
+
+#balloon:active {
+    transform: translate(-50%, -50%) scale(0.9);
+}
+
+.balloon-name {
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    color: #333;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.nail {
+    position: absolute;
+    width: 4px;
+    height: 25px;
+    background: linear-gradient(to bottom, #888, #333);
+    border-radius: 2px 2px 0 0;
+    transform-origin: center center;
+    pointer-events: none;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+
+.nail::after {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 10px;
+    height: 10px;
+    background: linear-gradient(45deg, #666, #444);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+#gameOver {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.gameOverContent {
+    background: white;
+    padding: 2em;
+    border-radius: 10px;
+    text-align: center;
+    font-family: Arial, sans-serif;
+}
+
+.gameOverContent h1 {
+    font-size: 48px;
+    margin: 0;
+    color: #ff4444;
+}
+
+.gameOverContent button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 18px;
+    cursor: pointer;
+    background: #4CAF50;
+    border: none;
+    color: white;
+    border-radius: 5px;
+    transition: background 0.2s;
+}
+
+.gameOverContent button:hover {
+    background: #45a049;
+}
+
+.hidden {
+    display: none !important;
+}
+
+#gameTitle {
+    text-align: center;
+    font-family: Arial, sans-serif;
+    color: #333;
+    margin-top: 20px;
+    font-size: 36px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+} 
