@@ -80,25 +80,7 @@ let currentMultiplier = 1.0;     // Track the current multiplier
 // Remove multiplier tracking
 let nailCount = 0;  // Track total nails that have fallen
 
-// Add background music
-const bgMusic = new Audio('KIUC.mp3');
-bgMusic.loop = true;
-bgMusic.volume = 0;  // Start silent
-
-// Ensure seamless looping
-bgMusic.addEventListener('timeupdate', function() {
-    const buffer = 0.44; // Buffer time before end to trigger loop
-    if (this.currentTime > this.duration - buffer) {
-        this.currentTime = 0;
-        this.play().catch(console.error);
-    }
-});
-
-// Preload the music
-bgMusic.preload = 'auto';
-bgMusic.load();
-
-// Create trippy background but hide it initially
+// Create trippy background but make it visible from start
 const canvas = document.createElement('canvas');
 canvas.style.position = 'fixed';
 canvas.style.top = '0';
@@ -106,7 +88,7 @@ canvas.style.left = '0';
 canvas.style.width = '100%';
 canvas.style.height = '100%';
 canvas.style.zIndex = '-1';
-canvas.style.opacity = '0';
+canvas.style.opacity = '1';  // Make canvas visible from start
 document.body.prepend(canvas);
 
 function resizeCanvas() {
@@ -125,16 +107,10 @@ let lastMilestone = 0;
 let shockwaveTime = 0;
 let isShockwaveActive = false;
 
-// Function to update music and background intensity
+// Function to update background intensity
 function updateIntensity() {
-    // Calculate intensity (0 to 1) based on score for music only
-    const musicIntensity = Math.min(1, nailCount / 200);
-    
-    // Update music volume
-    bgMusic.volume = 0.7 * musicIntensity;
-    
-    // Check for new milestone (every 100 points)
-    const currentMilestone = Math.floor(nailCount / 100);
+    // Check for new milestone (every 50 points)
+    const currentMilestone = Math.floor(nailCount / 50);
     if (currentMilestone > lastMilestone) {
         lastMilestone = currentMilestone;
         isShockwaveActive = true;
@@ -149,72 +125,114 @@ function updateBackground() {
     // Update intensities first
     updateIntensity();
     
-    // Start with dark grey background
+    // Always start with dark grey background
     ctx.fillStyle = '#222';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Get current milestone level (0-4)
-    const effectLevel = Math.floor(nailCount / 50);
+    // Layer effects based on score milestones
     
-    // Effect 1 (at 50+ points): Basic color waves
-    if (effectLevel >= 1) {
-        ctx.beginPath();
-        ctx.strokeStyle = `hsla(${hue}, 100%, 50%, 0.3)`;
-        for (let x = 0; x < canvas.width; x += 5) {
-            const y = canvas.height / 2 + Math.sin(x / 50 + time) * 100;
-            if (x === 0) {
-                ctx.moveTo(x, y);
-            } else {
-                ctx.lineTo(x, y);
+    // 50+ points: Gradient background and energy rings
+    if (nailCount >= 50) {
+        // Multiple gradients across screen
+        for(let x = 0; x < 2; x++) {
+            for(let y = 0; y < 2; y++) {
+                const gradient = ctx.createRadialGradient(
+                    canvas.width * (x + 0.5) / 2, canvas.height * (y + 0.5) / 2, 0,
+                    canvas.width * (x + 0.5) / 2, canvas.height * (y + 0.5) / 2, canvas.width/2
+                );
+                gradient.addColorStop(0, `hsla(${(hue + x * 120 + y * 60) % 360}, 70%, 20%, 0.5)`);
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
         }
-        ctx.stroke();
-    }
-    
-    // Effect 2 (at 100+ points): Multiple plasma waves
-    if (effectLevel >= 2) {
-        for (let i = 1; i < 3; i++) {
-            const offset = i * Math.PI * 2 / 3;
+        
+        // Energy rings spread across screen
+        for (let i = 0; i < 8; i++) {
+            const centerX = (i % 3) * canvas.width/2;
+            const centerY = Math.floor(i / 3) * canvas.height/2;
+            const radius = ((time * 40 + i * 100) % (Math.max(canvas.width, canvas.height)/2)) * 1.2;
             ctx.beginPath();
-            ctx.strokeStyle = `hsla(${(hue + i * 120) % 360}, 100%, 50%, 0.3)`;
-            for (let x = 0; x < canvas.width; x += 5) {
-                const y = canvas.height / 2 
-                    + Math.cos(x / 30 - time * 2 + offset) * 50;
-                if (x === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            }
+            ctx.strokeStyle = `hsla(${(hue + i * 45) % 360}, 100%, 50%, 0.2)`;
+            ctx.lineWidth = 2;
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
             ctx.stroke();
         }
     }
     
-    // Effect 3 (at 150+ points): Floating particles
-    if (effectLevel >= 3) {
-        for (let i = 0; i < 30; i++) {
-            const x = (Math.sin(time * 0.5 + i) * 0.5 + 0.5) * canvas.width;
-            const y = (Math.cos(time * 0.7 + i) * 0.5 + 0.5) * canvas.height;
-            const size = Math.sin(time + i) * 3 + 4;
+    // 100+ points: Add spiral waves
+    if (nailCount >= 100) {
+        // Multiple spiral sets across screen
+        for(let sx = 0; sx < 3; sx++) {
+            for(let sy = 0; sy < 2; sy++) {
+                ctx.save();
+                ctx.translate(canvas.width * (sx + 1) / 4, canvas.height * (sy + 1) / 3);
+                ctx.rotate(time * 0.5);
+                
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i / 6) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.strokeStyle = `hsla(${(hue + i * 60 + sx * 30 + sy * 45) % 360}, 100%, 50%, 0.15)`;
+                    ctx.lineWidth = 2;
+                    
+                    for (let r = 0; r < 120; r += 10) {
+                        const x = Math.cos(angle + r * 0.05 + time) * r;
+                        const y = Math.sin(angle + r * 0.05 + time) * r;
+                        if (r === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
+    }
+    
+    // 150+ points: Add particle field
+    if (nailCount >= 150) {
+        // Particles spread across entire screen
+        for (let i = 0; i < 40; i++) {
+            const baseX = (i % 4) * canvas.width/4;
+            const baseY = Math.floor(i / 4) * canvas.height/4;
+            const angle = (i / 40) * Math.PI * 2 + time;
+            const radius = 100 + Math.sin(time * 2 + i) * 50;
+            const x = baseX + Math.cos(angle) * radius;
+            const y = baseY + Math.sin(angle) * radius;
+            const size = Math.sin(time * 2 + i) * 3 + 4;
             
-            ctx.fillStyle = `hsla(${(hue + i * 7) % 360}, 100%, 50%, 0.3)`;
+            ctx.fillStyle = `hsla(${(hue + i * 9) % 360}, 100%, 60%, 0.25)`;
             ctx.beginPath();
             ctx.arc(x, y, size, 0, Math.PI * 2);
             ctx.fill();
         }
     }
     
-    // Effect 4 (at 200+ points): Full particle system and more intense waves
-    if (effectLevel >= 4) {
-        for (let i = 0; i < 20; i++) {
-            const x = (Math.sin(time * 0.8 + i * 2) * 0.5 + 0.5) * canvas.width;
-            const y = (Math.cos(time * 0.5 + i * 2) * 0.5 + 0.5) * canvas.height;
-            const size = Math.sin(time * 2 + i) * 5 + 6;
-            
-            ctx.fillStyle = `hsla(${(hue * 2 + i * 20) % 360}, 100%, 50%, 0.4)`;
-            ctx.beginPath();
-            ctx.arc(x, y, size, 0, Math.PI * 2);
-            ctx.fill();
+    // 200+ points: Add vortex patterns
+    if (nailCount >= 200) {
+        // Multiple vortexes across screen
+        for(let vx = 0; vx < 3; vx++) {
+            for(let vy = 0; vy < 2; vy++) {
+                ctx.save();
+                ctx.translate(canvas.width * (vx + 1) / 4, canvas.height * (vy + 1) / 3);
+                ctx.rotate(time + vx * Math.PI/3);
+                
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    const x = Math.cos(angle) * 80;
+                    const y = Math.sin(angle) * 80;
+                    
+                    ctx.beginPath();
+                    ctx.strokeStyle = `hsla(${(hue + i * 45 + vx * 30 + vy * 60) % 360}, 100%, 50%, 0.25)`;
+                    ctx.lineWidth = 2;
+                    ctx.moveTo(0, 0);
+                    ctx.quadraticCurveTo(
+                        x * 1.5, y * 1.5,
+                        x * (2 + Math.sin(time * 2)), y * (2 + Math.cos(time * 2))
+                    );
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
         }
     }
     
@@ -225,12 +243,22 @@ function updateBackground() {
         const shockwaveSize = shockwaveProgress * Math.max(canvas.width, canvas.height) * 1.5;
         const opacity = Math.max(0, 0.5 - shockwaveProgress * 0.5);
         
-        // Draw shockwave
-        ctx.beginPath();
-        ctx.arc(canvas.width / 2, canvas.height / 2, shockwaveSize, 0, Math.PI * 2);
-        ctx.strokeStyle = `hsla(${hue}, 100%, 50%, ${opacity})`;
-        ctx.lineWidth = 20 * (1 - shockwaveProgress);
-        ctx.stroke();
+        // Draw multiple shockwave rings from different points
+        for(let sx = 0; sx < 2; sx++) {
+            for(let sy = 0; sy < 2; sy++) {
+                const centerX = canvas.width * (sx + 1) / 3;
+                const centerY = canvas.height * (sy + 1) / 3;
+                
+                for (let i = 0; i < 3; i++) {
+                    const ringSize = shockwaveSize * (0.8 + i * 0.2);
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, ringSize * 0.7, 0, Math.PI * 2);
+                    ctx.strokeStyle = `hsla(${(hue + i * 120 + sx * 60 + sy * 30) % 360}, 100%, 50%, ${opacity * (1 - i * 0.2)})`;
+                    ctx.lineWidth = 15 * (1 - shockwaveProgress) * (1 - i * 0.2);
+                    ctx.stroke();
+                }
+            }
+        }
         
         // Add flash effect
         ctx.fillStyle = `hsla(${hue}, 100%, 100%, ${opacity * 0.3})`;
@@ -244,7 +272,7 @@ function updateBackground() {
     requestAnimationFrame(updateBackground);
 }
 
-// Start background animation
+// Start the background animation immediately
 updateBackground();
 
 // Track mouse position
@@ -346,11 +374,6 @@ if (restartButton) {
         // Hide game over screen
         if (gameOverScreen) {
             gameOverScreen.classList.add('hidden');
-        }
-        
-        // Try to start/adjust music
-        if (bgMusic.paused) {
-            startGame();
         }
         
         // Reset game state
@@ -467,17 +490,6 @@ function updateBalloonPosition() {
 
 // Function to start the game with explosion effect
 function startGame() {
-    // Start music with preload check
-    if (bgMusic.readyState >= 2) {  // Have enough data to play
-        bgMusic.currentTime = 0;
-        bgMusic.play().catch(console.error);
-    } else {
-        bgMusic.addEventListener('canplay', () => {
-            bgMusic.currentTime = 0;
-            bgMusic.play().catch(console.error);
-        }, { once: true });
-    }
-    
     // Create explosion effect
     const explosion = document.createElement('div');
     explosion.style.position = 'fixed';
@@ -507,7 +519,6 @@ function startGame() {
     setTimeout(() => {
         balloon.style.display = '';
         scoreElement.style.display = '';
-        canvas.style.opacity = '1';
         explosion.remove();
         scoreElement.textContent = 'Score: 0 (1.00x)';
         
