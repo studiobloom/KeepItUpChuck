@@ -16,7 +16,7 @@ startScreen.style.top = '0';
 startScreen.style.left = '0';
 startScreen.style.width = '100%';
 startScreen.style.height = '100%';
-startScreen.style.backgroundColor = '#000';
+startScreen.style.backgroundColor = '#222';  // Dark grey background
 startScreen.style.color = '#fff';
 startScreen.style.display = 'flex';
 startScreen.style.flexDirection = 'column';
@@ -69,21 +69,34 @@ const bounceDecay = 0.8;
 const airResistance = 0.998; // Even more floaty
 const buoyancy = 0.04;       // Gentle upward drift
 const pushForce = 0.4;       // Gentle push force
-const pushRadius = 100;      // How close the mouse needs to be
+const pushRadius = 50;      // How close the mouse needs to be
 
-// Add these constants at the top with other constants
-const BASE_SPAWN_DELAY = 3000;    // Start slower (3 seconds)
-const MIN_SPAWN_DELAY = 200;      // Don't get quite as fast
-const DIFFICULTY_SCALE = 200;     // Much more gradual scaling
+// Game constants
+const SPAWN_DELAY = 800;          // Constant time between spawns (milliseconds)
+const BASE_GROUP_SIZE = 1;        // Start with 1 nail
+const MULTIPLIER_INCREASE = 0.01; // How much multiplier increases per nail dodged
+let currentMultiplier = 1.0;     // Track the current multiplier
 
-// Add multiplier tracking
-let gameMultiplier = 1;
+// Remove multiplier tracking
 let nailCount = 0;  // Track total nails that have fallen
 
 // Add background music
 const bgMusic = new Audio('KIUC.mp3');
 bgMusic.loop = true;
-bgMusic.volume = 0.7;
+bgMusic.volume = 0;  // Start silent
+
+// Ensure seamless looping
+bgMusic.addEventListener('timeupdate', function() {
+    const buffer = 0.44; // Buffer time before end to trigger loop
+    if (this.currentTime > this.duration - buffer) {
+        this.currentTime = 0;
+        this.play().catch(console.error);
+    }
+});
+
+// Preload the music
+bgMusic.preload = 'auto';
+bgMusic.load();
 
 // Create trippy background but hide it initially
 const canvas = document.createElement('canvas');
@@ -94,7 +107,6 @@ canvas.style.width = '100%';
 canvas.style.height = '100%';
 canvas.style.zIndex = '-1';
 canvas.style.opacity = '0';
-canvas.style.transition = 'opacity 2s';
 document.body.prepend(canvas);
 
 function resizeCanvas() {
@@ -108,24 +120,48 @@ const ctx = canvas.getContext('2d');
 let time = 0;
 let hue = 0;
 
+// Add milestone tracking
+let lastMilestone = 0;
+let shockwaveTime = 0;
+let isShockwaveActive = false;
+
+// Function to update music and background intensity
+function updateIntensity() {
+    // Calculate intensity (0 to 1) based on score for music only
+    const musicIntensity = Math.min(1, nailCount / 200);
+    
+    // Update music volume
+    bgMusic.volume = 0.7 * musicIntensity;
+    
+    // Check for new milestone (every 100 points)
+    const currentMilestone = Math.floor(nailCount / 100);
+    if (currentMilestone > lastMilestone) {
+        lastMilestone = currentMilestone;
+        isShockwaveActive = true;
+        shockwaveTime = 0;
+    }
+}
+
 function updateBackground() {
     time += 0.02;
     hue = (hue + 1) % 360;
     
-    ctx.fillStyle = `hsl(${hue}, 50%, 5%)`;
+    // Update intensities first
+    updateIntensity();
+    
+    // Start with dark grey background
+    ctx.fillStyle = '#222';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Create multiple plasma waves
-    for (let i = 0; i < 3; i++) {
-        const offset = i * Math.PI * 2 / 3;
+    // Get current milestone level (0-4)
+    const effectLevel = Math.floor(nailCount / 50);
+    
+    // Effect 1 (at 50+ points): Basic color waves
+    if (effectLevel >= 1) {
         ctx.beginPath();
-        ctx.strokeStyle = `hsla(${(hue + i * 120) % 360}, 100%, 50%, 0.5)`;
-        
+        ctx.strokeStyle = `hsla(${hue}, 100%, 50%, 0.3)`;
         for (let x = 0; x < canvas.width; x += 5) {
-            const y = canvas.height / 2 
-                + Math.sin(x / 50 + time + offset) * 100 
-                + Math.cos(x / 30 - time * 2) * 50;
-            
+            const y = canvas.height / 2 + Math.sin(x / 50 + time) * 100;
             if (x === 0) {
                 ctx.moveTo(x, y);
             } else {
@@ -135,26 +171,74 @@ function updateBackground() {
         ctx.stroke();
     }
     
-    // Add floating particles
-    for (let i = 0; i < 50; i++) {
-        const x = (Math.sin(time * 0.5 + i) * 0.5 + 0.5) * canvas.width;
-        const y = (Math.cos(time * 0.7 + i) * 0.5 + 0.5) * canvas.height;
-        const size = Math.sin(time + i) * 3 + 4;
-        
-        ctx.fillStyle = `hsla(${(hue + i * 7) % 360}, 100%, 50%, 0.5)`;
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
-        ctx.fill();
+    // Effect 2 (at 100+ points): Multiple plasma waves
+    if (effectLevel >= 2) {
+        for (let i = 1; i < 3; i++) {
+            const offset = i * Math.PI * 2 / 3;
+            ctx.beginPath();
+            ctx.strokeStyle = `hsla(${(hue + i * 120) % 360}, 100%, 50%, 0.3)`;
+            for (let x = 0; x < canvas.width; x += 5) {
+                const y = canvas.height / 2 
+                    + Math.cos(x / 30 - time * 2 + offset) * 50;
+                if (x === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+        }
     }
     
-    // Add shockwave effect when multiplier increases
-    if (gameMultiplier > 1) {
-        const intensity = Math.sin(time * 5) * 0.5 + 0.5;
-        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${intensity * 0.1})`;
+    // Effect 3 (at 150+ points): Floating particles
+    if (effectLevel >= 3) {
+        for (let i = 0; i < 30; i++) {
+            const x = (Math.sin(time * 0.5 + i) * 0.5 + 0.5) * canvas.width;
+            const y = (Math.cos(time * 0.7 + i) * 0.5 + 0.5) * canvas.height;
+            const size = Math.sin(time + i) * 3 + 4;
+            
+            ctx.fillStyle = `hsla(${(hue + i * 7) % 360}, 100%, 50%, 0.3)`;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    
+    // Effect 4 (at 200+ points): Full particle system and more intense waves
+    if (effectLevel >= 4) {
+        for (let i = 0; i < 20; i++) {
+            const x = (Math.sin(time * 0.8 + i * 2) * 0.5 + 0.5) * canvas.width;
+            const y = (Math.cos(time * 0.5 + i * 2) * 0.5 + 0.5) * canvas.height;
+            const size = Math.sin(time * 2 + i) * 5 + 6;
+            
+            ctx.fillStyle = `hsla(${(hue * 2 + i * 20) % 360}, 100%, 50%, 0.4)`;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    
+    // Add milestone shockwave effect
+    if (isShockwaveActive) {
+        shockwaveTime += 0.05;
+        const shockwaveProgress = Math.min(1, shockwaveTime);
+        const shockwaveSize = shockwaveProgress * Math.max(canvas.width, canvas.height) * 1.5;
+        const opacity = Math.max(0, 0.5 - shockwaveProgress * 0.5);
+        
+        // Draw shockwave
         ctx.beginPath();
-        ctx.arc(canvas.width / 2, canvas.height / 2, 
-                Math.sin(time * 3) * 200 + 300, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.arc(canvas.width / 2, canvas.height / 2, shockwaveSize, 0, Math.PI * 2);
+        ctx.strokeStyle = `hsla(${hue}, 100%, 50%, ${opacity})`;
+        ctx.lineWidth = 20 * (1 - shockwaveProgress);
+        ctx.stroke();
+        
+        // Add flash effect
+        ctx.fillStyle = `hsla(${hue}, 100%, 100%, ${opacity * 0.3})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        if (shockwaveProgress >= 1) {
+            isShockwaveActive = false;
+        }
     }
     
     requestAnimationFrame(updateBackground);
@@ -175,22 +259,22 @@ class Nail {
         this.element = document.createElement('div');
         this.element.className = 'nail';
         document.body.appendChild(this.element);
-        this.active = true;  // Track if nail is still active
+        this.active = true;
         
-        // Random starting position at top of screen
+        // Start above the screen
         this.x = x ?? Math.random() * window.innerWidth;
-        this.y = -20;
+        this.y = -50;  // Start higher above the screen
         this.rotation = Math.random() * 360;
-        this.speed = speed ?? (2 + Math.random() * 3);  // Varied speeds
-        this.rotationSpeed = (Math.random() - 0.5) * 8;  // Some nails spin faster!
+        this.speed = speed ?? (3 + Math.random() * 7);  // Speed range from 2 to 6
+        this.rotationSpeed = (Math.random() - 0.5) * 8;
         
-        // Update nail appearance
         this.element.style.transform = `translate(${this.x}px, ${this.y}px) rotate(${this.rotation}deg)`;
     }
 
     update() {
         if (!this.active) return false;
         
+        // Remove multiplier from speed calculation
         this.y += this.speed;
         this.rotation += this.rotationSpeed;
         this.element.style.transform = `translate(${this.x}px, ${this.y}px) rotate(${this.rotation}deg)`;
@@ -200,7 +284,7 @@ class Nail {
         const dy = this.y - posY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        if (distance < 15) {  // Reduced from 30 to 15 for tighter hitbox
+        if (distance < 15) {
             this.destroy();
             gameOver();
             return false;
@@ -208,8 +292,10 @@ class Nail {
         
         // Remove if off screen and increment score
         if (this.y > window.innerHeight + 20) {
-            nailCount++;  // Increment nail count when a nail falls off screen
-            scoreElement.textContent = `Nails Dodged: ${nailCount} (${gameMultiplier.toFixed(1)}x)`;
+            nailCount++;
+            // Increase multiplier for each nail dodged
+            currentMultiplier = 1.0 + (nailCount * MULTIPLIER_INCREASE);
+            scoreElement.textContent = `Score: ${nailCount} (${currentMultiplier.toFixed(2)}x)`;
             this.destroy();
             return false;
         }
@@ -266,96 +352,52 @@ if (restartButton) {
         if (bgMusic.paused) {
             startGame();
         }
-        // Play intense sound effect on restart
-        bgMusic.playbackRate = Math.min(2, 1 + (gameMultiplier - 1) * 0.2);
-        
-        // Increment multiplier on restart (increased to match actual nail count better)
-        gameMultiplier *= 1.5;  // Multiply instead of add to match exponential growth
         
         // Reset game state
-        nailCount = 0;  // Reset nail count instead of score
-        scoreElement.textContent = `Nails Dodged: 0 (${gameMultiplier.toFixed(1)}x)`;
+        nailCount = 0;
+        currentMultiplier = 1.0;
+        scoreElement.textContent = `Score: 0 (1.00x)`;
         posX = window.innerWidth / 2;
         posY = window.innerHeight / 2;
         velocityX = (Math.random() - 0.5) * 2;
         velocityY = 0;
         
+        // Clear any existing spawn timeouts
+        if (window.spawnTimeout) {
+            clearTimeout(window.spawnTimeout);
+        }
+        
         // Re-enable game after a short delay
         setTimeout(() => {
             gameActive = true;
-            setTimeout(spawnNail, 1000);
+            spawnNail();
         }, 100);
     });
 }
 
-// Spawn multiple nails in patterns
-function spawnNailPattern() {
-    if (!gameActive) return;
-
-    // Calculate pattern intensity based on nail count only
-    const intensity = Math.min(3, Math.log(nailCount / 200 + 1));
-    
-    // Random pattern selection
-    const pattern = Math.floor(Math.random() * 4);
-    
-    // Use gameMultiplier directly for nail count
-    const multipliedCount = gameMultiplier;  // Don't ceil it to keep it accurate
-    
-    switch(pattern) {
-        case 0: // Line of nails
-            const x = Math.random() * window.innerWidth;
-            const lineCount = Math.floor((4 + intensity * 2) * multipliedCount);
-            for (let i = 0; i < lineCount; i++) {
-                nails.push(new Nail(4, x + (Math.random() - 0.5) * 30));
-            }
-            break;
-            
-        case 1: // Spread pattern
-            const spreadCount = Math.floor((2 + intensity * 1.5) * multipliedCount);
-            for (let i = 0; i < spreadCount; i++) {
-                nails.push(new Nail(3 + Math.random() * 2));
-            }
-            break;
-            
-        case 2: // Rain shower
-            const rainCount = Math.floor((6 + intensity * 3) * multipliedCount);
-            for (let i = 0; i < rainCount; i++) {
-                setTimeout(() => {
-                    if (gameActive) {
-                        nails.push(new Nail());
-                    }
-                }, i * 50);
-            }
-            break;
-            
-        case 3: // Fast nail burst
-            const burstCount = Math.floor((3 + intensity * 2) * multipliedCount);
-            for (let i = 0; i < burstCount; i++) {
-                nails.push(new Nail(5 + Math.random() * 2));
-            }
-            break;
-    }
-}
-
-// Spawn new nails periodically with increasing intensity
+// Spawn new nails periodically
 function spawnNail() {
     if (gameActive) {
-        spawnNailPattern();
+        // Calculate how many nails to spawn based on multiplier
+        const groupSize = Math.floor(1 + (currentMultiplier - 1) * 2);  // 1 nail at 1x, 3 at 2x, 5 at 3x, etc.
         
-        // Calculate extra nails chance based on nail count
-        const extraNailsChance = Math.min(0.8, Math.log(nailCount / 400 + 1) / 2);
+        // Create an array of evenly spaced x positions across the screen
+        const screenDivisions = window.innerWidth / groupSize;
         
-        // Potentially spawn multiple individual nails
-        for (let i = 0; i < 3; i++) {
-            if (Math.random() < extraNailsChance) {
-                nails.push(new Nail());
-            }
+        // Spawn the group of nails
+        for(let i = 0; i < groupSize; i++) {
+            // Calculate base position in this division
+            const baseX = screenDivisions * i;
+            // Add some randomness within the division
+            const randomOffset = (Math.random() - 0.5) * screenDivisions * 0.8;
+            const x = baseX + screenDivisions/2 + randomOffset;
+            
+            nails.push(new Nail(null, x));  // Let the constructor handle random speed
         }
     }
 
-    // Calculate next spawn delay using nail count
-    const spawnDelay = BASE_SPAWN_DELAY * Math.exp(-nailCount / DIFFICULTY_SCALE) + MIN_SPAWN_DELAY;
-    setTimeout(spawnNail, spawnDelay);
+    // Use constant spawn delay
+    window.spawnTimeout = setTimeout(spawnNail, SPAWN_DELAY);
 }
 
 function updateBalloonPosition() {
@@ -425,8 +467,16 @@ function updateBalloonPosition() {
 
 // Function to start the game with explosion effect
 function startGame() {
-    // Start music
-    bgMusic.play().catch(console.error);
+    // Start music with preload check
+    if (bgMusic.readyState >= 2) {  // Have enough data to play
+        bgMusic.currentTime = 0;
+        bgMusic.play().catch(console.error);
+    } else {
+        bgMusic.addEventListener('canplay', () => {
+            bgMusic.currentTime = 0;
+            bgMusic.play().catch(console.error);
+        }, { once: true });
+    }
     
     // Create explosion effect
     const explosion = document.createElement('div');
@@ -459,6 +509,7 @@ function startGame() {
         scoreElement.style.display = '';
         canvas.style.opacity = '1';
         explosion.remove();
+        scoreElement.textContent = 'Score: 0 (1.00x)';
         
         // Start the game
         gameActive = true;
@@ -468,9 +519,6 @@ function startGame() {
 
 // Start game on click
 startScreen.addEventListener('click', startGame, { once: true });
-
-// Start spawning nails
-spawnNail();
 
 // Game loop
 setInterval(updateBalloonPosition, 16); 
