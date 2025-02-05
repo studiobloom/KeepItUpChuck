@@ -26,7 +26,8 @@ const BASE_SPAWN_DELAY = 3000;    // Start slower (3 seconds)
 const MIN_SPAWN_DELAY = 200;      // Don't get quite as fast
 const DIFFICULTY_SCALE = 200;     // Much more gradual scaling
 
-// Add this with other variables at the top
+// Add multiplier tracking
+let gameMultiplier = 1;
 let nailCount = 0;  // Track total nails that have fallen
 
 // Track mouse position
@@ -75,7 +76,7 @@ class Nail {
         // Remove if off screen and increment score
         if (this.y > window.innerHeight + 20) {
             nailCount++;  // Increment nail count when a nail falls off screen
-            scoreElement.textContent = 'Nails Dodged: ' + nailCount;
+            scoreElement.textContent = `Nails Dodged: ${nailCount} (${gameMultiplier.toFixed(1)}x)`;
             this.destroy();
             return false;
         }
@@ -128,9 +129,12 @@ if (restartButton) {
             gameOverScreen.classList.add('hidden');
         }
         
+        // Increment multiplier on restart
+        gameMultiplier += 0.5;
+        
         // Reset game state
         nailCount = 0;  // Reset nail count instead of score
-        scoreElement.textContent = 'Nails Dodged: 0';
+        scoreElement.textContent = `Nails Dodged: 0 (${gameMultiplier.toFixed(1)}x)`;
         posX = window.innerWidth / 2;
         posY = window.innerHeight / 2;
         velocityX = (Math.random() - 0.5) * 2;
@@ -148,30 +152,33 @@ if (restartButton) {
 function spawnNailPattern() {
     if (!gameActive) return;
 
-    // Calculate pattern intensity based on nail count
-    const intensity = Math.min(3, Math.log(nailCount / 200 + 1));
+    // Calculate pattern intensity based on nail count and multiplier
+    const intensity = Math.min(3, Math.log((nailCount * gameMultiplier) / 200 + 1));
     
     // Random pattern selection
     const pattern = Math.floor(Math.random() * 4);
     
+    // Multiply the number of nails by the game multiplier
+    const multipliedCount = Math.ceil(gameMultiplier);
+    
     switch(pattern) {
         case 0: // Line of nails
             const x = Math.random() * window.innerWidth;
-            const lineCount = Math.floor(4 + intensity * 2);
+            const lineCount = Math.floor((4 + intensity * 2) * multipliedCount);
             for (let i = 0; i < lineCount; i++) {
                 nails.push(new Nail(4, x + (Math.random() - 0.5) * 30));
             }
             break;
             
         case 1: // Spread pattern
-            const spreadCount = Math.floor(2 + intensity * 1.5);
+            const spreadCount = Math.floor((2 + intensity * 1.5) * multipliedCount);
             for (let i = 0; i < spreadCount; i++) {
                 nails.push(new Nail(3 + Math.random() * 2));
             }
             break;
             
         case 2: // Rain shower
-            const rainCount = Math.floor(6 + intensity * 3);
+            const rainCount = Math.floor((6 + intensity * 3) * multipliedCount);
             for (let i = 0; i < rainCount; i++) {
                 setTimeout(() => {
                     if (gameActive) {
@@ -182,7 +189,7 @@ function spawnNailPattern() {
             break;
             
         case 3: // Fast nail burst
-            const burstCount = Math.floor(3 + intensity * 2);
+            const burstCount = Math.floor((3 + intensity * 2) * multipliedCount);
             for (let i = 0; i < burstCount; i++) {
                 nails.push(new Nail(5 + Math.random() * 2));
             }
