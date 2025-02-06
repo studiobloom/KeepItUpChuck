@@ -11,6 +11,7 @@ body {
     right: 20px;
     font-size: 24px;
     font-family: Arial, sans-serif;
+    color: white;
 }
 
 #balloon {
@@ -122,4 +123,106 @@ body {
     margin-top: 20px;
     font-size: 36px;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.multiplier-powerup {
+    position: fixed;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #ff6b6b, #ff3366);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-family: Arial, sans-serif;
+    font-size: 24px;
+    font-weight: bold;
+    box-shadow: 0 0 20px rgba(255, 102, 102, 0.5);
+    cursor: pointer;
+    user-select: none;
+    z-index: 100;
+    transition: transform 0.2s;
+}
+
+.multiplier-powerup::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: inherit;
+    filter: blur(10px);
+    opacity: 0.5;
+    z-index: -1;
+}
+
+.multiplier-powerup.collected {
+    transform: scale(1.5) !important;
+    opacity: 0;
+    transition: transform 0.3s, opacity 0.3s;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.multiplier-powerup:not(.collected) {
+    animation: pulse 1s infinite;
+}
+
+.bonus-orb {
+    position: fixed;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #ffd900b2, #ffa6009f);
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+    z-index: 100;
+    pointer-events: none;
+    will-change: transform;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.bonus-text {
+    position: absolute;
+    color: rgb(255, 255, 255);
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    font-size: 10px;
+    text-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.bonus-orb::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: inherit;
+    filter: blur(8px);
+    opacity: 0.5;
+    z-index: -1;
+}
+
+.bonus-orb.collected {
+    transform: scale(2) !important;
+    opacity: 0;
+    transition: transform 0.3s, opacity 0.3s;
+}
+
+@keyframes orbPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.bonus-orb:not(.collected) {
+    animation: orbPulse 1s infinite;
 } 

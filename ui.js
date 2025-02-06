@@ -71,6 +71,7 @@ function startGame() {
         explosion.remove();
         window.scoreElement.textContent = 'Score: 0 (1.00x)';
         window.gameActive = true;
+        document.dispatchEvent(new Event('gameStarted', { bubbles: true }));
         setTimeout(spawnNail, 1000);
     }, 500);
 }
@@ -94,6 +95,7 @@ if (window.restartButton) {
         }
         setTimeout(() => {
             window.gameActive = true;
+            document.dispatchEvent(new Event('gameStarted', { bubbles: true }));
             spawnNail();
         }, 100);
     });

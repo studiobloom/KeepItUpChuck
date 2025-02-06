@@ -4,7 +4,6 @@ window.gameOverScreen = document.getElementById('gameOver');
 window.finalScoreElement = document.getElementById('finalScore');
 window.restartButton = document.getElementById('restartButton');
 
-// Hide game elements initially
 window.balloon.style.display = 'none';
 window.scoreElement.style.display = 'none';
 
@@ -28,12 +27,10 @@ window.pushRadius = 50;
 window.SPAWN_DELAY = 800;
 window.MULTIPLIER_INCREASE = 0.01;
 window.currentMultiplier = 1.0;
+window.bonusMultiplier = 0.0;  // Track bonus multipliers separately
 window.nailCount = 0;
 
-// The following functionality has been split into component files:
-// background.js for canvas/background animations
-// nails.js for nail management and game over handling
-// balloon.js for balloon physics and movement
-// ui.js for start screen, explosion effect, and UI events
-
-/* Removed setInterval(updateBalloonPosition, 16) from game.js */ 
+// Helper function to calculate total multiplier
+window.getTotalMultiplier = function() {
+    return 1.0 + (window.nailCount * window.MULTIPLIER_INCREASE) + window.bonusMultiplier;
+};

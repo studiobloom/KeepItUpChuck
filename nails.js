@@ -5,7 +5,6 @@ class Nail {
         document.body.appendChild(this.element);
         this.active = true;
         
-        // Start above the screen
         this.x = x ?? Math.random() * window.innerWidth;
         this.y = -50;
         this.rotation = Math.random() * 360;
@@ -34,7 +33,7 @@ class Nail {
         
         if (this.y > window.innerHeight + 20) {
             window.nailCount++;
-            window.currentMultiplier = 1.0 + (window.nailCount * window.MULTIPLIER_INCREASE);
+            window.currentMultiplier = window.getTotalMultiplier();
             window.scoreElement.textContent = `Score: ${window.nailCount} (${window.currentMultiplier.toFixed(2)}x)`;
             this.destroy();
             return false;
@@ -75,6 +74,8 @@ function gameOver() {
     if (window.gameOverScreen) {
         window.gameOverScreen.classList.remove('hidden');
     }
+    
+    document.dispatchEvent(new Event('gameOver'));
 }
 
 function spawnNail() {
